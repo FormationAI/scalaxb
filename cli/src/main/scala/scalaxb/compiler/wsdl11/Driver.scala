@@ -23,7 +23,7 @@
 package scalaxb.compiler.wsdl11
 
 import scala.collection.mutable
-import scalaxb.compiler.{CanBeWriter, Config, CustomXML, Log, Module, Snippet}
+import scalaxb.compiler.{CanBeWriter, Config, CustomXML, Effect, Log, Module, Snippet}
 import masked.scalaxb.DataRecord
 import wsdl11._
 import java.io.Reader
@@ -196,8 +196,12 @@ class Driver extends Module { driver =>
     }
   }
 
-  def generateDispatchFromResource[To](async: Boolean, filePrefix: String)(implicit evTo: CanBeWriter[To]): To = {
-    val asyncSuffix = if (async) "_async" else ""
+  def generateDispatchFromResource[To](effect: Effect, filePrefix: String)(implicit evTo: CanBeWriter[To]): To = {
+    val asyncSuffix = effect match {
+      case Effect.Blocking => ""
+      case Effect.Future => "_async"
+      case e => sys.error(s"Unsupported effect type for Dispatch: $e")
+    }
     generateFromResource[To](
       Some("scalaxb"),
       s"httpclients_dispatch${asyncSuffix}.scala",
@@ -209,13 +213,19 @@ class Driver extends Module { driver =>
     List(
       generateFromResource[To](Some("scalaxb"), "scalaxb.scala",
         "/scalaxb.scala.template"),
-      if (config.async)
-        generateFromResource[To](Some("scalaxb"), "httpclients_async.scala",
-          "/httpclients_async.scala.template")
-      else
-        generateFromResource[To](Some("scalaxb"), "httpclients.scala",
-          "/httpclients.scala.template")) ++
-    (if (config.async)
+      config.clientEffect match {
+        case Effect.Future => 
+          generateFromResource[To](Some("scalaxb"), "httpclients_async.scala",
+            "/httpclients_async.scala.template")
+        case Effect.CatsEffect =>
+          generateFromResource[To](Some("scalaxb"), "httpclients_cats_effect.scala",
+            "/httpclients_cats_effect.scala.template")
+        case Effect.Blocking =>
+          generateFromResource[To](Some("scalaxb"), "httpclients.scala",
+            "/httpclients.scala.template")
+      }
+    ) ++
+    (if (config.clientEffect == Effect.Future)
       List(generateFromResource[To](Some("scalaxb"), "execution_context_provider.scala",
         "/execution_context_provider.scala.template"))
     else Nil) ++
@@ -224,60 +234,72 @@ class Driver extends Module { driver =>
      else Nil) ++
     (if (config.generateVisitor) List(generateFromResource[To](Some("scalaxb"), "Visitor.scala", "/visitor.scala.template"))
      else Nil) ++
-    (if (config.generateDispatchClient) List((config.dispatchVersion, config.async) match {
-      case (VersionPattern(0, minor, _), async) if minor < 10   =>
-        generateDispatchFromResource(async, "/httpclients_dispatch_classic")
+    (if (config.generateDispatchClient) List((config.dispatchVersion, config.clientEffect) match {
+      case (VersionPattern(0, minor, _), effect) if minor < 10   =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch_classic")
 
-      case (VersionPattern(0, 10 | 11, 0), async)               =>
-        generateDispatchFromResource(async, "/httpclients_dispatch0100")
+      case (VersionPattern(0, 10 | 11, 0), effect)               =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch0100")
 
-      case (VersionPattern(0, 11, 1 | 2), async)                =>
-        generateDispatchFromResource(async, "/httpclients_dispatch0111")
+      case (VersionPattern(0, 11, 1 | 2), effect)                =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch0111")
 
-      case (VersionPattern(0, 11, 3 | 4), async)                =>
-        generateDispatchFromResource(async, "/httpclients_dispatch0113")
+      case (VersionPattern(0, 11, 3 | 4), effect)                =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch0113")
 
-      case (VersionPattern(0, 12, 0 | 1), async)                => // 0.12.1 does not have artifact in maven central
+      case (VersionPattern(0, 12, 0 | 1), effect)                => // 0.12.1 does not have artifact in maven central
         // 0.12.[0, 1] is using same template as 0.11.3+
-        generateDispatchFromResource(async, "/httpclients_dispatch0113")
+        generateDispatchFromResource(effect, "/httpclients_dispatch0113")
+      case (VersionPattern(0, 12, _), effect)                    =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch0122")
 
-      case (VersionPattern(0, 12, _), async)                    =>
-        generateDispatchFromResource(async, "/httpclients_dispatch0122")
+      case (VersionPattern(0, 13, _), effect)                    =>
+        generateDispatchFromResource(effect, "/httpclients_dispatch0130")
 
-      case (VersionPattern(0, 13, _), async)                    =>
-        generateDispatchFromResource(async, "/httpclients_dispatch0130")
-
-      case (VersionPattern(0, 14, _), async)                    =>
+      case (VersionPattern(0, 14, _), effect)                    =>
         // Same as 0.13.x
-        generateDispatchFromResource(async, "/httpclients_dispatch0130")
+        generateDispatchFromResource(effect, "/httpclients_dispatch0130")
     }) else Nil) ++
-    (if (config.generateGigahorseClient) List((config.gigahorseVersion, config.async) match {
-      case (VersionPattern(x, y, _), false) if (x.toInt == 0) && ((y.toInt == 2) || (y.toInt == 3)) =>
+    (if (config.generateGigahorseClient) List((config.gigahorseVersion, config.clientEffect) match {
+      case (VersionPattern(x, y, _), Effect.Blocking) if (x.toInt == 0) && ((y.toInt == 2) || (y.toInt == 3)) =>
         generateFromResource[To](Some("scalaxb"), "httpclients_gigahorse.scala",
           "/httpclients_gigahorse02.scala.template", Some("%%BACKEND%%" -> config.gigahorseBackend))
-      case (VersionPattern(x, y, _), true) if (x.toInt == 0) && ((y.toInt == 2) || (y.toInt == 3)) =>
+      case (VersionPattern(x, y, _), Effect.Future) if (x.toInt == 0) && ((y.toInt == 2) || (y.toInt == 3)) =>
         generateFromResource[To](Some("scalaxb"), "httpclients_gigahorse_async.scala",
           "/httpclients_gigahorse02_async.scala.template", Some("%%BACKEND%%" -> config.gigahorseBackend))
     }) else Nil) ++
+    (if (config.generateHttp4sClient) List((config.http4sVersion) match {
+      case VersionPattern(x, y, _) if (x.toInt == 0) && (y.toInt == 18) =>
+        generateFromResource[To](Some("scalaxb"), "httpclients_http4s.scala",
+          "/httpclients_http4s-0.18.scala.template")
+    }) else Nil) ++
     (if (cntxt.soap11) List(
-      (if (config.async)
-        generateFromResource[To](Some("scalaxb"), "soap11_async.scala",
-          "/soap11_async.scala.template")
-      else
-        generateFromResource[To](Some("scalaxb"), "soap11.scala",
-          "/soap11.scala.template")),
+      (config.clientEffect match {
+        case Effect.Future =>
+          generateFromResource[To](Some("scalaxb"), "soap11_async.scala",
+            "/soap11_async.scala.template")
+        case Effect.CatsEffect =>
+          generateFromResource[To](Some("scalaxb"), "soap11_cats_effect.scala",
+            "/soap11_cats_effect.scala.template")
+        case Effect.Blocking =>
+          generateFromResource[To](Some("scalaxb"), "soap11.scala",
+            "/soap11.scala.template")}),
       generateFromResource[To](Some("soapenvelope11"), "soapenvelope11.scala",
         "/soapenvelope11.scala.template"),
       generateFromResource[To](Some("soapenvelope11"), "soapenvelope11_xmlprotocol.scala",
         "/soapenvelope11_xmlprotocol.scala.template"))
     else Nil) ++
     (if (cntxt.soap12) List(
-      (if (config.async)
-        generateFromResource[To](Some("scalaxb"), "soap12_async.scala",
-          "/soap12_async.scala.template")
-      else
-        generateFromResource[To](Some("scalaxb"), "soap12.scala",
-          "/soap12.scala.template")),
+      (config.clientEffect match {
+        case Effect.Future =>
+          generateFromResource[To](Some("scalaxb"), "soap12_async.scala",
+            "/soap12_async.scala.template")
+        case Effect.CatsEffect =>
+          generateFromResource[To](Some("scalaxb"), "soap12_cats_effect.scala",
+            "/soap12_cats_effect.scala.template")
+        case Effect.Blocking =>
+          generateFromResource[To](Some("scalaxb"), "soap12.scala",
+            "/soap12.scala.template")}),
       generateFromResource[To](Some("soapenvelope12"), "soapenvelope12.scala",
         "/soapenvelope12.scala.template"),
       generateFromResource[To](Some("soapenvelope12"), "soapenvelope12_xmlprotocol.scala",

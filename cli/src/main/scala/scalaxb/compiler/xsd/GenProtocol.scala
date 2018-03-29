@@ -22,7 +22,7 @@
 
 package scalaxb.compiler.xsd
 
-import scalaxb.compiler.{Module, Config, Snippet, Log}
+import scalaxb.compiler.{Module, Config, Effect, Snippet, Log}
 import scala.xml._
 
 class GenProtocol(val context: XsdContext, var config: Config) extends ContextProcessor {
@@ -99,8 +99,11 @@ class GenProtocol(val context: XsdContext, var config: Config) extends ContextPr
       (serviceTargetNamespaces.toList.zipWithIndex map { case (ns, idx) => Some("tns") -> ns }) :::
       List((Some(XSI_PREFIX) -> XSI_URL), (Some(XS_PREFIX) -> XS_URL))).distinct, 0)
     val packageString = config.protocolPackageName map { "package " + _ + newline } getOrElse{""}
-    val importFutureString = if (config.async)
-      "import scala.concurrent.Future" + newline else ""
+    val importFutureString = config.clientEffect match {
+      case Effect.Future => "import scala.concurrent.Future" + newline
+      case Effect.CatsEffect => "import scala.language.higherKinds" + newline
+      case Effect.Blocking => ""
+    }
     val packageValueString = config.protocolPackageName map { x => x } getOrElse {""}
     val maxChunkLength = 200
     val nOfClauses = snippet.elemToTypeClauses.length

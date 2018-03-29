@@ -12,6 +12,8 @@ object Dependencies {
   val defaultGigahorseVersion = "0.3.1"
   val defaultGigahorseBackend = "okhttp"
   val gigahorse = "com.eed3si9n" %% s"gigahorse-$defaultGigahorseBackend" % defaultGigahorseVersion
+  val defaultHttp4sVersion = "0.18.4"
+  val http4sBlazeClient = "org.http4s" %% s"http4s-blaze-client" % defaultHttp4sVersion
   val launcherInterface = "org.scala-sbt" % "launcher-interface" % "0.12.0"
   val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.0.6"
   val scalaParser = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
@@ -43,6 +45,7 @@ object Dependencies {
   def integrationDependencies(sv: String) = Seq(
     dispatch % "test",
     gigahorse % "test",
+    http4sBlazeClient % "test",    
     scalaCompiler(sv),
     specs2(sv) % "test",
     cxfFrontendJaxws % "test",

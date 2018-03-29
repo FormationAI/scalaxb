@@ -58,19 +58,23 @@ case class Config(items: Map[String, ConfigEntry]) {
   def generateDispatchClient: Boolean = values contains GenerateDispatchClient
   def generateDispatchAs: Boolean = values contains GenerateDispatchAs
   def generateGigahorseClient: Boolean = values contains GenerateGigahorseClient
+  def generateHttp4sClient: Boolean = values contains GenerateHttp4sClient
   def contentsSizeLimit: Int =
     (get[ContentsSizeLimit] getOrElse defaultContentsSizeLimit).value
   def sequenceChunkSize: Int =
     (get[SequenceChunkSize] getOrElse defaultSequenceChunkSize).value
   def namedAttributes: Boolean = values contains NamedAttributes
   def laxAny: Boolean = values contains LaxAny
-  def async: Boolean = values contains GenerateAsync
+  def clientEffect: Effect =
+    (get[ClientEffect] getOrElse defaultClientEffect).value
   def dispatchVersion: String =
     (get[DispatchVersion] getOrElse defaultDispatchVersion).value
   def gigahorseVersion: String =
     (get[GigahorseVersion] getOrElse defaultGigahorseVersion).value
   def gigahorseBackend: String =
     (get[GigahorseBackend] getOrElse defaultGigahorseBackend).value
+  def http4sVersion: String =
+    (get[Http4sVersion] getOrElse defaultHttp4sVersion).value
   def varArg: Boolean = values contains VarArg
   def ignoreUnknown: Boolean = values contains IgnoreUnknown
   def autoPackages: Boolean = values contains AutoPackages
@@ -101,9 +105,11 @@ object Config {
   val defaultDefaultNamespace = DefaultNamespace(None)
   val defaultContentsSizeLimit = ContentsSizeLimit(Int.MaxValue)
   val defaultSequenceChunkSize = SequenceChunkSize(10)
+  val defaultClientEffect = ClientEffect(Effect.Future)
   val defaultDispatchVersion = DispatchVersion(scalaxb.BuildInfo.defaultDispatchVersion)
   val defaultGigahorseVersion = GigahorseVersion(scalaxb.BuildInfo.defaultGigahorseVersion)
   val defaultGigahorseBackend = GigahorseBackend(scalaxb.BuildInfo.defaultGigahorseBackend)
+  val defaultHttp4sVersion = Http4sVersion(scalaxb.BuildInfo.defaultHttp4sVersion)
   val defaultSymbolEncodingStrategy = SymbolEncoding.Legacy151
 
   val default = Config(
@@ -111,7 +117,7 @@ object Config {
       defaultWrappedComplexTypes, SeperateProtocol, defaultProtocolFileName,
       defaultProtocolPackageName, GenerateRuntime, GenerateDispatchClient,
       defaultContentsSizeLimit, defaultSequenceChunkSize,
-      GenerateAsync, defaultDispatchVersion)
+      defaultClientEffect, defaultDispatchVersion)
   )
 }
 
@@ -137,14 +143,16 @@ object ConfigEntry {
   case object GenerateDispatchClient extends ConfigEntry
   case object GenerateDispatchAs extends ConfigEntry
   case object GenerateGigahorseClient extends ConfigEntry
+  case object GenerateHttp4sClient extends ConfigEntry
   case class ContentsSizeLimit(value: Int) extends ConfigEntry
   case class SequenceChunkSize(value: Int) extends ConfigEntry
   case object NamedAttributes extends ConfigEntry
   case object LaxAny extends ConfigEntry
-  case object GenerateAsync extends ConfigEntry
+  case class ClientEffect(value: Effect) extends ConfigEntry
   case class DispatchVersion(value: String) extends ConfigEntry
   case class GigahorseVersion(value: String) extends ConfigEntry
   case class GigahorseBackend(value: String) extends ConfigEntry
+  case class Http4sVersion(value: String) extends ConfigEntry  
   case object VarArg extends ConfigEntry
   case object IgnoreUnknown extends ConfigEntry
   case object AutoPackages extends ConfigEntry

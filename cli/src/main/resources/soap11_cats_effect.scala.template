@@ -1,25 +1,30 @@
 package scalaxb
 
-case class Fault[+A](original: Any, detail: Option[A], headers: scala.xml.NodeSeq) extends Exception {
-  def asFault[B: scalaxb.XMLFormat]: Fault[B] = Fault(original, detail map {
-    case x: soapenvelope12.Detail => x.any.head.value match {
+import cats.Functor
+import cats.implicits._
+import scala.language.higherKinds
+import soapenvelope11.{Fault => _, _}
+
+case class Soap11Fault[+A](original: Any, detail: Option[A], headers: scala.xml.NodeSeq) extends Exception {
+  def asFault[B: scalaxb.XMLFormat]: Soap11Fault[B] = Soap11Fault(original, detail map {
+    case soapenvelope11.Detail(dataRecord :: _, _) => dataRecord.value match {
       case node: scala.xml.Node => scalaxb.fromXML[B](node)
       case _ => sys.error("unsupported fault: " + toString)
     }
     case _ => sys.error("unsupported fault: " + toString)
   }, headers)
-  def asNillableFault[B: scalaxb.XMLFormat]: Fault[Option[B]] = Fault(original, detail map {
-    case x: soapenvelope12.Detail => x.any.head.value match {
-      case node: scala.xml.Node if scalaxb.Helper.isNil(node) => None 
+  def asNillableFault[B: scalaxb.XMLFormat]: Soap11Fault[Option[B]] = Soap11Fault(original, detail map {
+    case soapenvelope11.Detail(dataRecord :: _, _) => dataRecord.value match {
+      case node: scala.xml.Node if scalaxb.Helper.isNil(node) => None
       case node: scala.xml.Node                               => Some(scalaxb.fromXML[B](node))
       case _ => sys.error("unsupported fault: " + toString)
     }
     case _ => sys.error("unsupported fault: " + toString)
   }, headers)
-  override def toString: String = s"""Fault($original, $detail, $headers)"""
+  override def toString: String = s"""Soap11Fault($original, $detail, $headers)"""
 }
 
-trait SoapClient[F[_]] {
+trait Soap11Client[F[_]] {
   def soapRequest(in: Option[Envelope], scope: scala.xml.NamespaceBinding,
                   address: java.net.URI, webMethod: String, action: Option[java.net.URI])
       : F[Envelope]
@@ -33,11 +38,10 @@ trait SoapClient[F[_]] {
       : F[(scala.xml.NodeSeq, scala.xml.NodeSeq)]
 }
 
-object SoapClient {
-  import soapenvelope12.{Fault => _, _}
-  val SOAP_ENVELOPE_URI = "http://www.w3.org/2003/05/soap-envelope"
+object Soap11Client {
+  val SOAP_ENVELOPE11_URI = "http://schemas.xmlsoap.org/soap/envelope/"
 
-  def apply[F[_]: Functor](httpClient: HttpClient[F]): SoapClient[F] = new SoapClient[F] {
+  def apply[F[_]: Functor](httpClient: HttpClient[F]): Soap11Client[F] = new Soap11Client[F] {
     def soapRequest(in: Option[Envelope], scope: scala.xml.NamespaceBinding,
                     address: java.net.URI, webMethod: String, action: Option[java.net.URI]): F[Envelope] = {
       val merged = scalaxb.toScope(((Some("soap11") -> SOAP_ENVELOPE11_URI) ::

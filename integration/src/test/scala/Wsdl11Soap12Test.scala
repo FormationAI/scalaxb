@@ -1,6 +1,6 @@
 import scalaxb.compiler.wsdl11.Driver
 import java.io.File
-import scalaxb.compiler.Config
+import scalaxb.compiler.{Config, Effect}
 import scalaxb.compiler.ConfigEntry._
 
 object Wsdl11Soap12Test extends TestBase {
@@ -13,7 +13,7 @@ object Wsdl11Soap12Test extends TestBase {
     val config =  Config.default.update(PackageNames(Map(None -> Some(packageName)))).
       update(Outdir(tmp)).
       update(GeneratePackageDir).
-      remove(GenerateAsync)
+      update(ClientEffect(Effect.Blocking))
     lazy val generated = module.process(inFile, config)
 
     (List("""val service = (new stockquote.StockQuoteSoap12Bindings with scalaxb.SoapClients with scalaxb.DispatchHttpClients {}).service
@@ -30,7 +30,7 @@ object Wsdl11Soap12Test extends TestBase {
     val config =  Config.default.update(PackageNames(Map(None -> Some(packageName)))).
       update(Outdir(tmp)).
       update(GeneratePackageDir).
-      remove(GenerateAsync)
+      update(ClientEffect(Effect.Blocking))
     lazy val generated = module.process(inFile, config)
 
     (List(
@@ -87,7 +87,7 @@ object Wsdl11Soap12Test extends TestBase {
     val config =  Config.default.update(PackageNames(Map(None -> Some(packageName)))).
       update(Outdir(tmp)).
       update(GeneratePackageDir).
-      remove(GenerateAsync)
+      update(ClientEffect(Effect.Blocking))
     lazy val generated = module.process(inFile, config)
 
     (List(
@@ -148,7 +148,7 @@ object Wsdl11Soap12Test extends TestBase {
     val config =  Config.default.update(PackageNames(Map(None -> Some(packageName)))).
       update(Outdir(tmp)).
       update(GeneratePackageDir).
-      remove(GenerateAsync)
+      update(ClientEffect(Effect.Blocking))
     lazy val generated = module.process(inFile, config)
 
     (List(

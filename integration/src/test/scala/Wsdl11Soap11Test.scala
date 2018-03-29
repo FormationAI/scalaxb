@@ -1,6 +1,6 @@
 import scalaxb.compiler.wsdl11.Driver
 import java.io.File
-import scalaxb.compiler.Config
+import scalaxb.compiler.{Config, Effect}
 import scalaxb.compiler.ConfigEntry._
 
 object Wsdl11Soap11Test extends TestBase {
@@ -14,7 +14,7 @@ object Wsdl11Soap11Test extends TestBase {
       update(Outdir(tmp)).
       update(GenerateGigahorseClient).
       update(GeneratePackageDir).
-      remove(GenerateAsync)
+      update(ClientEffect(Effect.Blocking))
   "stockquote.scala file must compile" in {
     (List("""import genericbarcode._""",
        """val service = (new BarCodeSoapBindings with scalaxb.Soap11Clients with scalaxb.DispatchHttpClients {}).service

@@ -3,7 +3,7 @@ package sbtscalaxb
 import sbt._
 import Keys._
 
-import scalaxb.compiler.{Config => ScConfig}
+import scalaxb.compiler.{Config => ScConfig, ConfigEntry, Effect}
 
 trait ScalaxbKeys {
   lazy val scalaxb                 = taskKey[Seq[File]]("Generates case classes and typeclass instances")
@@ -38,7 +38,7 @@ trait ScalaxbKeys {
   lazy val scalaxbDispatchVersion  = settingKey[String]("Dispatch version")
   lazy val scalaxbGigahorseVersion = settingKey[String]("Gigahorse version")
   lazy val scalaxbGigahorseBackend = settingKey[GigahorseHttpBackend.Value]("Gigahorse http backend")
-  lazy val scalaxbAsync            = settingKey[Boolean]("Generates async SOAP client")
+  lazy val scalaxbEffect           = settingKey[Effect]("Generates a Blocking, Future, or Cats-Effect SOAP client")
   lazy val scalaxbIgnoreUnknown    = settingKey[Boolean]("Ignores unknown Elements")
   lazy val scalaxbVararg           = settingKey[Boolean]("Uses varargs when possible. (default: false)")
   lazy val scalaxbCapitalizeWords  = settingKey[Boolean]("Attempts to capitalize class and attribute names to match the CamelCase convention")

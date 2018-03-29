@@ -4,7 +4,7 @@ import sbt._
 import Keys._
 import scala.collection.immutable
 import scalaxb.{compiler => sc}
-import scalaxb.compiler.{Config => ScConfig}
+import scalaxb.compiler.{Config => ScConfig, ConfigEntry, Effect}
 import sc.ConfigEntry._
 
 object ScalaxbPlugin extends sbt.AutoPlugin {
@@ -78,7 +78,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
     scalaxbDispatchVersion         := ScConfig.defaultDispatchVersion.value,
     scalaxbGigahorseVersion        := ScConfig.defaultGigahorseVersion.value,
     scalaxbGigahorseBackend        := GigahorseHttpBackend.OkHttp,
-    scalaxbAsync                   := true,
+    scalaxbEffect                  := Effect.Future,
     scalaxbIgnoreUnknown           := false,
     scalaxbVararg                  := false,
     scalaxbGenerateMutable         := false,
@@ -123,7 +123,7 @@ object ScalaxbPlugin extends sbt.AutoPlugin {
         Vector(DispatchVersion(scalaxbDispatchVersion.value)) ++
         Vector(GigahorseVersion(scalaxbGigahorseVersion.value)) ++
         Vector(GigahorseBackend(scalaxbGigahorseBackend.value.toString)) ++
-        (if (scalaxbAsync.value) Vector(GenerateAsync) else Vector()) ++
+        Vector(ClientEffect(scalaxbEffect.value)) ++
         (if (scalaxbIgnoreUnknown.value) Vector(IgnoreUnknown) else Vector()) ++
         (if (scalaxbVararg.value && !scalaxbGenerateMutable.value) Vector(VarArg) else Vector()) ++
         (if (scalaxbGenerateMutable.value) Vector(GenerateMutable) else Vector()) ++

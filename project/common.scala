@@ -46,7 +46,8 @@ object Common {
     buildInfoKeys := BuildInfoKey.ofN(name, version, scalaVersion, sbtVersion,
       "defaultDispatchVersion" -> Dependencies.defaultDispatchVersion,
       "defaultGigahorseVersion" -> Dependencies.defaultGigahorseVersion,
-      "defaultGigahorseBackend" -> Dependencies.defaultGigahorseBackend),
+      "defaultGigahorseBackend" -> Dependencies.defaultGigahorseBackend,
+      "defaultHttp4sVersion" -> Dependencies.defaultHttp4sVersion),
   )
 
   val sonatypeSettings: Seq[Def.Setting[_]] = Seq(

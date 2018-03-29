@@ -1,0 +1,23 @@
+package scalaxb
+
+import cats.effect.Sync
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.language.higherKinds
+import org.http4s._
+import org.http4s.client.Client
+
+object Http4sClient {
+  def apply[F[_]](client: org.http4s.client.Client[F])(implicit F: Sync[F]): HttpClient[F] = new HttpClient[F] {
+    def request(in: String, address: java.net.URI, headers: Map[String, String]): F[String] = {
+      println("ADDRESS ====== "+address)
+      Uri.fromString(address.toString) match {
+        case Right(uri) =>
+          val http4sHeaders = Headers(headers.map { case (name, value) => Header(name, value) }.toList)
+          client.expect[String](Request[F](method = Method.POST, uri = uri, headers = http4sHeaders))
+        case Left(e) =>
+          F.raiseError(new IllegalArgumentException(s"Invalid URI: $address", e))
+      }
+    }
+  }
+}

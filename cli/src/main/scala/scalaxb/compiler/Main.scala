@@ -123,7 +123,9 @@ object Arguments {
       opt[Unit]("lax-any") text("relaxes namespace constraints of xs:any") action { (_, c) =>
         c.update(LaxAny) }
       opt[Unit]("blocking") text("generates blocking SOAP client") action { (_, c) =>
-        c.remove(GenerateAsync) }
+        c.update(ClientEffect(Effect.Blocking)) }
+      opt[Unit]("cats-effect") text("generates cats-effect SOAP client") action { (_, c) =>
+        c.update(ClientEffect(Effect.CatsEffect)) }
       opt[String]("dispatch-version") valueName("<version>") text("version of Dispatch (default: " + scalaxb.BuildInfo.defaultDispatchVersion + ")") action { (x, c) =>
         c.update(DispatchVersion(x)) }
       opt[Unit]("no-varargs") text("uses Seq instead of the varargs") action { (_, c) =>

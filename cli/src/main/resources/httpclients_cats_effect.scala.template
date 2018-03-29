@@ -1,0 +1,7 @@
+package scalaxb
+
+import scala.language.higherKinds
+
+trait HttpClient[F[_]] {
+  def request(in: String, address: java.net.URI, headers: Map[String, String]): F[String]
+}
